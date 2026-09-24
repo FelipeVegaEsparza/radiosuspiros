@@ -61,6 +61,7 @@ class PlaylistTemplate extends TemplateBase {
     await super.init();
     
     try {
+      this.setupContactForm();
       await this.checkTVAvailability();
       await this.loadAllContent();
       this.setupModalEventListeners();
@@ -572,7 +573,55 @@ class PlaylistTemplate extends TemplateBase {
       };
     });
   }
-  
+
+  // Setup del formulario de contacto
+  setupContactForm() {
+    const form = document.getElementById('contact-form');
+    if (!form) return;
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = form.querySelector('.contact-submit-btn');
+      const feedback = document.getElementById('contact-feedback');
+      const name = document.getElementById('contact-name').value.trim();
+      const email = document.getElementById('contact-email').value.trim();
+      const subject = document.getElementById('contact-subject').value.trim();
+      const message = document.getElementById('contact-message').value.trim();
+
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>Enviando...</span>';
+
+      try {
+        const resp = await fetch('/api/contact', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, email, subject, message })
+        });
+        const data = await resp.json().catch(() => ({}));
+
+        if (resp.ok && data.success) {
+          if (feedback) {
+            feedback.className = 'contact-feedback success';
+            feedback.textContent = data.message || 'Gracias por tu mensaje. Te responderemos pronto.';
+            feedback.style.display = 'block';
+          }
+          form.reset();
+        } else {
+          throw new Error(data.message || 'Error al enviar el mensaje');
+        }
+      } catch (err) {
+        if (feedback) {
+          feedback.className = 'contact-feedback error';
+          feedback.textContent = err.message || 'Error al enviar el mensaje. Intenta de nuevo.';
+          feedback.style.display = 'block';
+        }
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-paper-plane"></i><span>Enviar mensaje</span>';
+      }
+    });
+  }
+
   // Mostrar sección
   async showSection(sectionName) {
     if (this.sectionStates[sectionName] === false) {
@@ -1491,7 +1540,8 @@ class PlaylistTemplate extends TemplateBase {
       'galleries': 'Galerías',
       'announcers': 'Locutores',
       'polls': 'Encuestas',
-      'events': 'Eventos'
+      'events': 'Eventos',
+      'contact': 'Contacto'
     };
     return titles[section] || section;
   }

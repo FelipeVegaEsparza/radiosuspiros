@@ -31,6 +31,7 @@ class MinimalistaTemplate extends TemplateBase {
       this.vuMeter.init();
       this.vuMeter.stop();
 
+      this.setupContactModal();
       await this.checkTVAvailability();
       console.log('MinimalistaTemplate: Template fully initialized! 🚀');
     } catch (error) {
@@ -63,6 +64,73 @@ class MinimalistaTemplate extends TemplateBase {
     } catch (error) {
       console.error('MinimalistaTemplate: Error checking TV availability:', error);
     }
+  }
+
+  setupContactModal() {
+    const btn = document.getElementById('contact-btn');
+    const overlay = document.getElementById('contact-popup-overlay');
+    const closeBtn = document.getElementById('contact-popup-close');
+
+    if (btn && overlay) {
+      btn.addEventListener('click', () => overlay.classList.add('active'));
+    }
+    if (closeBtn && overlay) {
+      closeBtn.addEventListener('click', () => overlay.classList.remove('active'));
+    }
+    if (overlay) {
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) overlay.classList.remove('active');
+      });
+    }
+
+    this.setupContactForm();
+  }
+
+  setupContactForm() {
+    const form = document.getElementById('contact-form');
+    if (!form) return;
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = form.querySelector('.contact-submit-btn');
+      const feedback = document.getElementById('contact-feedback');
+      const name = document.getElementById('contact-name').value.trim();
+      const email = document.getElementById('contact-email').value.trim();
+      const subject = document.getElementById('contact-subject').value.trim();
+      const message = document.getElementById('contact-message').value.trim();
+
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>Enviando...</span>';
+
+      try {
+        const resp = await fetch('/api/contact', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, email, subject, message })
+        });
+        const data = await resp.json().catch(() => ({}));
+
+        if (resp.ok && data.success) {
+          if (feedback) {
+            feedback.className = 'contact-feedback success';
+            feedback.textContent = data.message || 'Gracias por tu mensaje. Te responderemos pronto.';
+            feedback.style.display = 'block';
+          }
+          form.reset();
+        } else {
+          throw new Error(data.message || 'Error al enviar el mensaje');
+        }
+      } catch (err) {
+        if (feedback) {
+          feedback.className = 'contact-feedback error';
+          feedback.textContent = err.message || 'Error al enviar el mensaje. Intenta de nuevo.';
+          feedback.style.display = 'block';
+        }
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-paper-plane"></i><span>Enviar mensaje</span>';
+      }
+    });
   }
 
   openTVPopup() {
